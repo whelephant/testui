@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VCEHUB</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,400;0,14..32,600;0,14..32,700;0,14..32,900;1,14..32,900&display=swap" rel="stylesheet" />
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body, #root { min-height: 100%; }
+    body { font-family: 'Inter', sans-serif; }
+    a { cursor: pointer; }
+
+    a { cursor: pointer; }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+
+
+
+const { useState, useEffect } = React;
+
+// ─── THEMES ──────────────────────────────────────────────────────────────────
+
+const THEMES = {
+  original: {
+    label: "Original",
+    bg: "#fafaf8",
+    heroBg: "rgb(238, 254, 255)",
+    ink: "#0f0f0f",
+    dim: "#6b7280",
+    rule: "#e5e7eb",
+    hl: "#ccff00",
+    hlInk: "#0f0f0f",
+    tag: "#faff47",
+    tagInk: "#0f0f0f",
+    FLURO: [
+      ["#ccff00","#ff00aa"],
+      ["#faff47","#0066ff"],
+      ["#ff4800","#00ffcc"],
+      ["#00e5ff","#ff4800"],
+      ["#ff8c00","#ccff00"],
+      ["#ff00aa","#ccff00"]
+    ]
+  },
+  lifeAquatic: {
+    label: "Life Aquatic",
+    bg: "#f0f4f6",
+    heroBg: "#ddeaf0",
+    ink: "#1a2830",
+    dim: "#5c7a8a",
+    rule: "#c4d6df",
+    hl: "#6BBCD4",
+    hlInk: "#1a2830",
+    tag: "#C9A227",
+    tagInk: "#1a2830",
+    FLURO: [
+      ["#6BBCD4","#C9A227"],
+      ["#C9A227","#2E7FA3"],
+      ["#2E7FA3","#D4672A"],
+      ["#D4672A","#6BBCD4"],
+      ["#C03020","#C9A227"],
+      ["#2E7FA3","#6BBCD4"]
+    ]
+  },
+  darjeeling: {
+    label: "Darjeeling",
+    bg: "#F7F0E2",
+    heroBg: "#EDE3C8",
+    ink: "#1e1208",
+    dim: "#7a5c3a",
+    rule: "#d6c8a8",
+    hl: "#C8102E",
+    hlInk: "#F7F0E2",
+    tag: "#D4862A",
+    tagInk: "#1e1208",
+    FLURO: [
+      ["#C8102E","#F7F0E2"],
+      ["#007A6E","#D4862A"],
+      ["#D4862A","#C8102E"],
+      ["#6BAED6","#1e1208"],
+      ["#C8102E","#6BAED6"],
+      ["#007A6E","#C8102E"]
+    ]
+  }
+};
+
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "theme": "original"
+}/*EDITMODE-END*/;
+
+function useTheme() {
+  const [themeKey, setThemeKey] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("vce_tweaks") || "{}").theme || TWEAK_DEFAULTS.theme; } catch { return TWEAK_DEFAULTS.theme; }
+  });
+  const setTheme = (k) => {
+    setThemeKey(k);
+    localStorage.setItem("vce_tweaks", JSON.stringify({ theme: k }));
+    window.parent.postMessage({ type: "__edit_mode_set_keys", edits: { theme: k } }, "*");
+  };
+  return [THEMES[themeKey] || THEMES.original, themeKey, setTheme];
+}
+
+// ─── TWEAKS PANEL ────────────────────────────────────────────────────────────
+
+function TweaksPanel({ themeKey, setTheme }) {
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    const handler = (e) => {
+      if (e.data?.type === "__activate_edit_mode") setVisible(true);
+      if (e.data?.type === "__deactivate_edit_mode") setVisible(false);
+    };
+    window.addEventListener("message", handler);
+    window.parent.postMessage({ type: "__edit_mode_available" }, "*");
+    return () => window.removeEventListener("message", handler);
+  }, []);
+  if (!visible) return null;
+  return (
+    <div style={{
+      position: "fixed", bottom: 24, right: 24, zIndex: 9999,
+      background: "#fff", border: "1px solid #e5e7eb",
+      padding: "20px 22px", minWidth: 220,
+      boxShadow: "0 4px 24px rgba(0,0,0,0.12)",
+      fontFamily: "Inter, sans-serif"
+    }}>
+      <div style={{ fontSize: 11, fontWeight: 900, letterSpacing: "0.12em", textTransform: "uppercase", color: "#6b7280", marginBottom: 16 }}>Tweaks</div>
+      <div style={{ fontSize: 12, fontWeight: 700, color: "#0f0f0f", marginBottom: 10 }}>Colour Theme</div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        {Object.entries(THEMES).map(([key, theme]) => (
+          <button key={key} onClick={() => setTheme(key)} style={{
+            display: "flex", alignItems: "center", gap: 10,
+            background: themeKey === key ? "#0f0f0f" : "transparent",
+            border: "1px solid #e5e7eb",
+            padding: "8px 12px", cursor: "pointer", textAlign: "left",
+            fontFamily: "Inter, sans-serif", fontSize: 13, fontWeight: 700,
+            color: themeKey === key ? "#fff" : "#0f0f0f",
+            transition: "background 0.1s, color 0.1s"
+          }}>
+            <div style={{ display: "flex", gap: 3, flexShrink: 0 }}>
+              {theme.FLURO.slice(0, 4).map(([bg], i) => (
+                <div key={i} style={{ width: 10, height: 10, background: bg }} />
+              ))}
+            </div>
+            {theme.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── THEME CONTEXT ────────────────────────────────────────────────────────────
+
+function hl(color, inkColor) {
+  return { background: color, color: inkColor, padding: "2px 6px 4px", fontStyle: "italic", display: "inline-block", lineHeight: 1 };
+}
+
+const ThemeCtx = React.createContext(THEMES.original);
+const useT = () => React.useContext(ThemeCtx);
+
+const SUBJECTS = [
+{ name: "Mathematical Methods", area: "Mathematics", count: 320 },
+{ name: "English", area: "Humanities", count: 180 },
+{ name: "Chemistry", area: "Science", count: 290 },
+{ name: "Physics", area: "Science", count: 350 },
+{ name: "Biology", area: "Science", count: 310 },
+{ name: "Specialist Mathematics", area: "Mathematics", count: 410 },
+{ name: "Psychology", area: "Science", count: 240 },
+{ name: "Further Mathematics", area: "Mathematics", count: 280 },
+{ name: "History: Revolutions", area: "Humanities", count: 195 },
+{ name: "Legal Studies", area: "Humanities", count: 160 },
+{ name: "Accounting", area: "Commerce", count: 145 },
+{ name: "Software Development", area: "Technology", count: 220 }];
+
+
+const TOOLS = [
+{ name: "Study Design Tracker", num: "01", detail: "Track every dot point in the VCAA study design as you go." },
+{ name: "ATAR Calculator", num: "02", detail: "Estimate your ATAR using real scaling data from past years." },
+{ name: "SAC Planner", num: "03", detail: "Enter your SAC dates and get a revision plan around your timetable." },
+{ name: "99.95 Study Guides", num: "04", detail: "Written by students who scored 45+. No padding, no fluff." }];
+
+
+const AREAS = ["All", "Mathematics", "Science", "Humanities", "Commerce", "Technology"];
+
+// ─── NAV ─────────────────────────────────────────────────────────────────────
+
+function FluroLink({ label, onClick, colorIdx, style }) {
+  const [hov, setHov] = useState(false);
+  const T = useT();
+  const [bg, fg] = T.FLURO[colorIdx % T.FLURO.length];
+  return (
+    <a
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
+      onClick={onClick}
+      style={{
+        textDecoration: "none", cursor: "pointer", whiteSpace: "nowrap",
+        padding: "4px 8px",
+        background: hov ? bg : "transparent",
+        color: hov ? fg : T.ink,
+        fontStyle: hov ? "italic" : "normal",
+        textShadow: hov ? `0 0 10px ${fg}99` : "none",
+        transition: "background 0.08s, color 0.08s, font-style 0.08s",
+        ...style
+      }}>{label}</a>);
+
+}
+
+function NavLink({ label, onClick, colorIdx }) {
+  const [hov, setHov] = useState(false);
+  const T = useT();
+  const [bg, fg] = T.FLURO[colorIdx % T.FLURO.length];
+  return (
+    <a
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
+      onClick={onClick}
+      style={{
+        fontSize: 12, fontWeight: 900,
+        textDecoration: "none", whiteSpace: "nowrap", cursor: "pointer",
+        padding: "4px 8px",
+        background: hov ? bg : "transparent",
+        color: hov ? fg : T.dim,
+        fontStyle: hov ? "italic" : "normal",
+        textShadow: hov ? `0 0 10px ${fg}99` : "none",
+        transition: "background 0.08s, color 0.08s, font-style 0.08s, text-shadow 0.08s"
+      }}>{label}</a>);
+
+}
+
+
+
+
+
+function CtaCTA({ setPage }) {
+  const [hov, setHov] = useState(false);
+  const T = useT();
+  const [hbg, hfg] = T.FLURO[5];
+  return (
+    <a
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
+      onClick={() => setPage("subjects")}
+      style={{
+        fontSize: 18, fontWeight: 900, letterSpacing: "-0.01em",
+        textDecoration: "none", cursor: "pointer",
+        background: hov ? hbg : T.hl,
+        color: hov ? hfg : T.hlInk,
+        textShadow: hov ? `0 0 12px ${hfg}99` : "none",
+        padding: "10px 20px 12px",
+        display: "inline-block", flexShrink: 0, whiteSpace: "nowrap",
+        transition: "background 0.1s, color 0.1s"
+      }}>Begin by selecting your subjects →</a>);
+}
+
+// ─── HOME ─────────────────────────────────────────────────────────────────────
+
+function HomePage({ setPage }) {
+  const T = useT();
+  return (
+    <div style={{ background: T.bg, color: T.ink, minHeight: "100vh" }}>
+      {/* Hero */}
+      <section style={{ padding: "80px 48px", borderBottom: `1px solid ${T.rule}`, background: T.heroBg }}>
+        <h1 style={{
+          fontSize: "clamp(52px, 8.5vw, 104px)",
+          fontWeight: 900, lineHeight: 1.0,
+          letterSpacing: "-0.04em", marginBottom: 40, fontFamily: "Inter",
+          color: T.ink
+        }}>
+          We <span style={hl(T.hl, T.hlInk)}>won't</span> save the world,
+          but we <span style={hl(T.hl, T.hlInk)}>will</span> make your VCE easier.
+        </h1>
+        <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 40, flexWrap: "wrap" }}>
+          <p style={{ fontSize: 17, color: T.dim, maxWidth: 480, lineHeight: 1.7, width: "100000px" }}>
+            Everything you need in one place with all friction removed. Created by 99.95 ATAR and 50 SS students.
+          </p>
+          <CtaCTA setPage={setPage} />
+        </div>
+      </section>
+
+      {/* Tools */}
+      <div style={{ borderBottom: `1px solid ${T.rule}` }}>
+        <div style={{
+          padding: "32px 48px",
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          borderBottom: `1px solid ${T.rule}`
+        }}>
+          <span style={{ fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: T.dim, fontSize: "1px" }}>Tools</span>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", borderLeft: `1px solid ${T.rule}` }}>
+          {TOOLS.map((tool, i) => <ToolCard key={tool.num} tool={tool} colorIdx={i} />)}
+        </div>
+      </div>
+
+      <Footer setPage={setPage} />
+    </div>);
+}
+
+function ToolCard({ tool, colorIdx }) {
+  const [hov, setHov] = useState(false);
+  const T = useT();
+  const [bg, fg] = T.FLURO[colorIdx % T.FLURO.length];
+  return (
+    <div
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
+      style={{
+        borderRight: `1px solid ${T.rule}`,
+        borderBottom: `1px solid ${T.rule}`,
+        padding: "40px",
+        display: "flex", flexDirection: "column", justifyContent: "space-between",
+        minHeight: 260,
+        background: hov ? bg : T.bg,
+        transition: "background 0.1s",
+        cursor: "pointer"
+      }}>
+      <div>
+        <span style={{
+          display: "inline-block",
+          fontSize: 13, fontWeight: 900, letterSpacing: "0.04em",
+          color: hov ? fg : T.dim,
+          marginBottom: 20,
+          fontStyle: hov ? "italic" : "normal",
+          textShadow: hov ? `0 0 8px ${fg}88` : "none",
+          transition: "color 0.1s, font-style 0.1s"
+        }}>{tool.num}</span>
+        <h3 style={{
+          fontSize: 28, fontWeight: 900, letterSpacing: "-0.03em",
+          lineHeight: 1.15, marginBottom: 12,
+          color: hov ? fg : T.ink,
+          textShadow: hov ? `0 0 12px ${fg}66` : "none",
+          transition: "color 0.1s"
+        }}>{tool.name}</h3>
+        <p style={{ fontSize: 13, color: hov ? fg + "cc" : T.dim, lineHeight: 1.6, transition: "color 0.1s" }}>{tool.detail}</p>
+      </div>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 28 }}>
+        <span style={{
+          fontSize: 12, fontWeight: 700,
+          color: hov ? fg : T.ink,
+          borderBottom: `1.5px solid ${hov ? fg : T.rule}`,
+          paddingBottom: 1, transition: "color 0.1s, border-color 0.15s"
+        }}>Open tool</span>
+        <span style={{
+          fontSize: 18,
+          transform: hov ? "translateX(4px)" : "none",
+          transition: "transform 0.15s, color 0.1s",
+          color: hov ? fg : T.dim
+        }}>→</span>
+      </div>
+    </div>);
+}
+
+// ─── SUBJECTS PAGE ────────────────────────────────────────────────────────────
+
+function SubjectsPage({ setPage }) {
+  const [filter, setFilter] = useState("All");
+  const T = useT();
+  const filtered = filter === "All" ? SUBJECTS : SUBJECTS.filter((s) => s.area === filter);
+
+  return (
+    <div style={{ background: T.bg, color: T.ink, minHeight: "100vh" }}>
+      {/* Header */}
+      <section style={{ padding: "80px 48px", borderBottom: `1px solid ${T.rule}` }}>
+        <p style={{ fontSize: 12, fontWeight: 900, letterSpacing: "0.1em", textTransform: "uppercase", color: T.dim, marginBottom: 16 }}>
+          Subjects
+        </p>
+        <h1 style={{
+          fontSize: "clamp(40px, 6vw, 72px)",
+          fontWeight: 900, lineHeight: 1.0,
+          letterSpacing: "-0.03em", marginBottom: 32, color: T.ink
+        }}>
+          12 subjects.<br /><span style={hl(T.hl, T.hlInk)}>All covered.</span>
+        </h1>
+        <p style={{ fontSize: 15, color: T.dim, maxWidth: 560, lineHeight: 1.7 }}>
+          Past exam questions, study design dot points, and expert notes — organised by subject, searchable by topic.
+        </p>
+      </section>
+
+      {/* Filters */}
+      <div style={{ padding: "32px 48px", borderBottom: `1px solid ${T.rule}`, display: "flex", gap: 12, flexWrap: "wrap" }}>
+        {AREAS.map((area, i) => <FilterChip key={area} area={area} active={filter === area} onClick={() => setFilter(area)} colorIdx={i} />)}
+      </div>
+
+      {/* Grid */}
+      <div style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
+        borderLeft: `1px solid ${T.rule}`
+      }}>
+        {filtered.map((s) => <SubjectCard key={s.name} subject={s} />)}
+      </div>
+
+      <Footer setPage={setPage} />
+    </div>);
+}
+
+function FilterChip({ area, active, onClick, colorIdx }) {
+  const [hov, setHov] = useState(false);
+  const T = useT();
+  const [bg, fg] = T.FLURO[colorIdx % T.FLURO.length];
+  return (
+    <button
+      onClick={onClick}
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
+      style={{
+        background: active ? bg : hov ? bg : "transparent",
+        border: "none",
+        padding: "4px 10px 6px",
+        fontSize: 26, fontWeight: 900, letterSpacing: "-0.03em",
+        fontFamily: "'Inter', sans-serif",
+        fontStyle: active || hov ? "italic" : "normal",
+        color: active ? fg : hov ? fg : T.dim,
+        textShadow: active || hov ? `0 0 10px ${fg}88` : "none",
+        cursor: "pointer", whiteSpace: "nowrap", lineHeight: 1.1,
+        transition: "background 0.1s, color 0.1s, font-style 0.1s"
+      }}>{area}</button>);
+}
+
+const AREA_IDX = { Mathematics: 0, Science: 1, Humanities: 2, Commerce: 3, Technology: 4 };
+
+function SubjectCard({ subject }) {
+  const [hov, setHov] = useState(false);
+  const T = useT();
+  const cidx = AREA_IDX[subject.area] ?? 5;
+  const [bg, fg] = T.FLURO[cidx % T.FLURO.length];
+  return (
+    <div
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
+      style={{
+        borderRight: `1px solid ${T.rule}`,
+        borderBottom: `1px solid ${T.rule}`,
+        padding: "28px 32px",
+        background: hov ? bg : "transparent",
+        transition: "background 0.12s",
+        cursor: "pointer"
+      }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+        <span style={{
+          fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase",
+          background: hov ? fg : T.tag,
+          color: hov ? bg : T.tagInk,
+          padding: "3px 8px",
+          transition: "background 0.12s, color 0.12s"
+        }}>{subject.area}</span>
+        <span style={{
+          fontSize: 16,
+          color: hov ? fg : T.dim,
+          transform: hov ? "translate(3px,-3px)" : "none",
+          transition: "transform 0.15s, color 0.12s"
+        }}>↗</span>
+      </div>
+      <h3 style={{
+        fontSize: 22, fontWeight: 800, letterSpacing: "-0.02em",
+        lineHeight: 1.2, marginBottom: 8,
+        color: hov ? fg : T.ink,
+        textShadow: hov ? `0 0 12px ${fg}66` : "none",
+        transition: "color 0.12s"
+      }}>{subject.name}</h3>
+      <p style={{ fontSize: 12, color: hov ? fg + "bb" : T.dim, fontWeight: 500, transition: "color 0.12s" }}>{subject.count} questions</p>
+    </div>);
+}
+
+// ─── FOOTER ──────────────────────────────────────────────────────────────────
+
+function Footer({ setPage }) {
+  const T = useT();
+  return (
+    <footer style={{
+      padding: "24px 48px",
+      display: "flex", justifyContent: "space-between", alignItems: "center",
+      borderTop: `1px solid ${T.rule}`, background: T.bg
+    }}>
+      <FluroLink label="VCEHUB" colorIdx={5} onClick={() => setPage("home")} style={{ fontSize: 12, fontWeight: 700 }} />
+      <span style={{ fontSize: 12, color: T.dim }}>© 2026</span>
+    </footer>);
+}
+
+// ─── NAV (needs T too) ────────────────────────────────────────────────────────
+
+function Nav({ setPage }) {
+  const T = useT();
+  return (
+    <nav style={{
+      display: "flex", alignItems: "center", justifyContent: "space-between",
+      padding: "18px 48px",
+      borderBottom: `1px solid ${T.rule}`,
+      background: T.bg,
+      gap: 24,
+      position: "sticky", top: 0, zIndex: 100
+    }}>
+      <FluroLink label="VCEHUB" onClick={() => setPage("home")} colorIdx={5} style={{ fontSize: 13, fontWeight: 900, letterSpacing: "0.14em", textTransform: "uppercase", flexShrink: 0 }} />
+      <div style={{ display: "flex", gap: 4, flex: 1, justifyContent: "center" }}>
+        {["Study Design", "ATAR Calc", "SAC Calendar", "Study Guides"].map((l, i) =>
+          <NavLink key={l} label={l} colorIdx={i} />
+        )}
+        <NavLink label="Subjects" onClick={() => setPage("subjects")} colorIdx={4} />
+      </div>
+      <FluroLink label="Sign In" colorIdx={2} style={{ fontSize: 12, fontWeight: 700 }} />
+    </nav>);
+}
+
+// ─── APP ─────────────────────────────────────────────────────────────────────
+
+function App() {
+  const [page, setPageRaw] = useState(() => localStorage.getItem("vce_page") || "home");
+  const setPage = (p) => { localStorage.setItem("vce_page", p); setPageRaw(p); };
+  const [theme, themeKey, setTheme] = useTheme();
+
+  return (
+    <ThemeCtx.Provider value={theme}>
+      <div style={{ background: theme.bg, transition: "background 0.3s" }}>
+        <Nav setPage={setPage} />
+        {page === "home" && <HomePage setPage={setPage} />}
+        {page === "subjects" && <SubjectsPage setPage={setPage} />}
+        <TweaksPanel themeKey={themeKey} setTheme={setTheme} />
+      </div>
+    </ThemeCtx.Provider>);
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
